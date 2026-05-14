@@ -1,0 +1,86 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+
+      routes:
+
+        # 🔐 AUTH SERVICE (PUBLIC)
+        - id: authentication-service
+          uri: lb://AUTHENTICATION
+          predicates:
+            - Path=/auth/**,/login,/oauth2/**
+
+        # 🔐 ADMIN (SECURED)
+        - id: admin-service
+          uri: lb://AUTHENTICATION
+          predicates:
+            - Path=/admin/**,/user/**
+          filters:
+            - AuthenticationFilter
+
+        # 👤 PASSENGER SERVICE
+        - id: passenger-service
+          uri: lb://PASSENGER-SERVICE
+          predicates:
+            - Path=/passenger/**
+          filters:
+            - AuthenticationFilter
+
+        # 💺 SEATS SERVICE
+        - id: seats-service
+          uri: lb://SEATS
+          predicates:
+            - Path=/seats/**, /staff/seat/**
+          filters:
+            - AuthenticationFilter
+
+        # ✈️ FLIGHT SERVICE
+        - id: flight-service
+          uri: lb://SKYBOOKER
+          predicates:
+            - Path=/flight/**, /staff/flight/**
+          filters:
+            - AuthenticationFilter
+
+        # 🧾 BOOKING SERVICE (🔥 ADDED FIX)
+        - id: booking-service
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/booking/**
+          filters:
+            - AuthenticationFilter
+
+        # 💳 PAYMENT PUBLIC (NO AUTH)
+        - id: payment-public
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/payment/success, /payment/cancel, /payments/webhook
+
+        # 💳 PAYMENT SECURED
+        - id: payment-secured
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/payment/**
+          filters:
+            - AuthenticationFilter
+
+eureka:
+  client:
+    service-url:
+      defaultZone: https://sprint-eureka-server-1.onrender.com
+    register-with-eureka: true
+    fetch-registry: true
+
+  instance:
+    prefer-ip-address: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG
